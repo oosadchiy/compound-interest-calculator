@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Калькулятор сложного процента</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #111; }
+    .page { padding: 20px; }
+    .label { font-size: 14px; font-weight: 700; }
+    .field { height: 40px; width: 200px; box-sizing: border-box; border: 0.5px solid rgba(0,0,0,0.35); border-radius: 8px; padding: 0 10px; font-size: 14px; outline: none; }
+    .field:focus { border-color: rgba(0,0,0,0.6); }
+    .field.invalid { border: 1px solid #e02424; }
+    .field::-webkit-outer-spin-button, .field::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .field { -moz-appearance: textfield; }
+    .err { font-size: 12px; color: #e02424; margin-top: 4px; }
+    .radio-row { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+    .calc-btn { height: 40px; padding: 0 18px; background: #111; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .calc-btn:active { transform: scale(0.98); }
+    table.results { margin-top: 36px; border-collapse: separate; border-spacing: 4px 0; font-size: 14px; width: 100%; }
+    table.results th { text-align: left; font-weight: 700; padding: 6px 10px; background: rgba(128,128,128,0.22); border-radius: 8px; white-space: nowrap; }
+    table.results td { text-align: left; padding: 6px 10px; white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <div id="app" class="page">
+    <h1 style="font-size: revert; font-weight: revert; margin: 0 0 20px;">Калькулятор сложного процента</h1>
+
+    <!-- Сетка числовых полей 2×2 -->
+    <div style="display: grid; grid-template-columns: repeat(2, max-content); gap: 16px; margin-bottom: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label class="label" for="initial">Начальная сумма</label>
+        <input id="initial" class="field" :class="{ invalid: showErrors && errors.initial }" type="number" inputmode="numeric" min="0"
+               :value="initial" @keydown="blockKey($event, false)" @input="onInput($event, 'initial', false)" />
+        <div class="err" v-if="showErrors && errors.initial">{{ errors.initial }}</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label class="label" for="contribution">Сумма пополнения</label>
+        <input id="contribution" class="field" :class="{ invalid: showErrors && errors.contribution }" type="number" inputmode="numeric" min="0"
+               :value="contribution" @keydown="blockKey($event, false)" @input="onInput($event, 'contribution', false)" />
+        <div class="err" v-if="showErrors && errors.contribution">{{ errors.contribution }}</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label class="label" for="rate">Годовая ставка, %</label>
+        <input id="rate" class="field" :class="{ invalid: showErrors && errors.ratePercent }" type="number" inputmode="numeric" min="0"
+               :value="ratePercent" @keydown="blockKey($event, false)" @input="onInput($event, 'ratePercent', false)" />
+        <div class="err" v-if="showErrors && errors.ratePercent">{{ errors.ratePercent }}</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label class="label" for="years">Срок, лет</label>
+        <input id="years" class="field" :class="{ invalid: showErrors && errors.years }" type="number" inputmode="numeric" min="1" step="1"
+               :value="years" @keydown="blockKey($event, true)" @input="onInput($event, 'years', true)" />
+        <div class="err" v-if="showErrors && errors.years">{{ errors.years }}</div>
+      </div>
+    </div>
+
+    <!-- Radio-группы + кнопка -->
+    <div style="display: flex; align-items: flex-end; gap: 20px;">
+      <div style="display: grid; grid-template-columns: repeat(2, max-content); column-gap: 24px; row-gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="label">Регулярность пополнений</span>
+          <label class="radio-row"><input type="radio" value="monthly" v-model="contributionFreq" /> Ежемесячно</label>
+          <label class="radio-row"><input type="radio" value="yearly" v-model="contributionFreq" /> Ежегодно</label>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="label">Капитализация процентов</span>
+          <label class="radio-row"><input type="radio" value="semiannual" v-model="compounding" /> Раз в полгода</label>
+          <label class="radio-row"><input type="radio" value="yearly" v-model="compounding" /> Ежегодно</label>
+        </div>
+      </div>
+      <button class="calc-btn" @click="calculate">Рассчитать</button>
+    </div>
+
+    <!-- Таблица результатов по годам -->
+    <table class="results">
+      <thead>
+        <tr>
+          <th>Год</th>
+          <th>Пополнения за год</th>
+          <th>Проценты за год</th>
+          <th>Баланс на конец года</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="row in rows" :key="row.year">
+          <td>{{ row.year }}</td>
+          <td>{{ fmt(row.contribThisYear) }}</td>
+          <td>{{ fmt(row.interestThisYear) }}</td>
+          <td>{{ fmt(row.balance) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const { createApp, ref, computed } = Vue;
+
+    createApp({
+      setup() {
+        // Поля — строки, чтобы отличать "пусто" от 0. Дефолтов нет.
+        const initial = ref('');
+        const contribution = ref('');
+        const ratePercent = ref('');
+        const years = ref('');
+        const contributionFreq = ref('monthly');   // monthly | yearly
+        const compounding = ref('yearly');          // semiannual | yearly
+
+        const showErrors = ref(false);
+        const rows = ref([]);
+
+        const refs = { initial, contribution, ratePercent, years };
+
+        // Блокировка ввода: запрет '-', '+', 'e'; для целого поля ещё '.' и ','.
+        function blockKey(e, intOnly) {
+          const blocked = ['-', '+', 'e', 'E'];
+          if (intOnly) blocked.push('.', ',');
+          if (blocked.includes(e.key)) e.preventDefault();
+        }
+
+        // Санитизация значения (на случай вставки): не даём отрицательное / дробное (для срока).
+        function onInput(e, key, intOnly) {
+          let v = e.target.value;
+          if (v === '') { refs[key].value = ''; return; }
+          let n = Number(v);
+          if (isNaN(n)) { refs[key].value = ''; e.target.value = ''; return; }
+          if (n < 0) n = Math.abs(n);
+          if (intOnly) n = Math.floor(n);
+          const out = String(n);
+          refs[key].value = out;
+          if (e.target.value !== out) e.target.value = out;
+        }
+
+        const errors = computed(() => {
+          const e = { initial: null, contribution: null, ratePercent: null, years: null };
+          if (initial.value === '') e.initial = 'Заполните поле';
+          if (contribution.value === '') e.contribution = 'Заполните поле';
+          if (ratePercent.value === '') e.ratePercent = 'Заполните поле';
+          if (years.value === '') {
+            e.years = 'Заполните поле';
+          } else {
+            const y = Number(years.value);
+            if (!Number.isInteger(y) || y < 1) e.years = 'Введите целое число от 1';
+          }
+          return e;
+        });
+
+        const isValid = computed(() =>
+          Object.values(errors.value).every(v => v === null)
+        );
+
+        // Помесячная симуляция (12 шагов в году покрывают все комбинации частот).
+        function simulate() {
+          const p0 = Number(initial.value) || 0;
+          const contrib = Number(contribution.value) || 0;
+          const rate = (Number(ratePercent.value) || 0) / 100;
+          const totalYears = Number(years.value) || 0;
+
+          const k = compounding.value === 'semiannual' ? 2 : 1; // капитализаций в год
+          const periodRate = rate / k;
+          const isCompMonth = (m) => (k === 2 ? (m === 6 || m === 12) : (m === 12));
+          const isContribMonth = (m) => (contributionFreq.value === 'monthly' ? true : (m === 12));
+
+          let balance = p0;
+          const out = [];
+          for (let year = 1; year <= totalYears; year++) {
+            let interestThisYear = 0;
+            let contribThisYear = 0;
+            for (let month = 1; month <= 12; month++) {
+              // Сначала пополнение, затем (в месяц капитализации) начисление процента.
+              if (isContribMonth(month)) { balance += contrib; contribThisYear += contrib; }
+              if (isCompMonth(month)) {
+                const interest = balance * periodRate;
+                balance += interest;
+                interestThisYear += interest;
+              }
+            }
+            out.push({ year, contribThisYear, interestThisYear, balance });
+          }
+          return out;
+        }
+
+        function calculate() {
+          showErrors.value = true;
+          if (!isValid.value) return; // таблица не пересчитывается
+          rows.value = simulate();
+        }
+
+        const rubFmt = new Intl.NumberFormat('ru-RU', {
+          style: 'currency', currency: 'RUB', maximumFractionDigits: 0
+        });
+        const fmt = (value) => rubFmt.format(value);
+
+        return {
+          initial, contribution, ratePercent, years,
+          contributionFreq, compounding,
+          showErrors, rows, errors, isValid,
+          blockKey, onInput, calculate, fmt
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
