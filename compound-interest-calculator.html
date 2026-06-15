@@ -7,14 +7,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <style>
-    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #111; }
+    body { margin: 0; background: #F4F3EF; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #111; }
     .page { padding: 20px; }
     .label { font-size: 14px; font-weight: 700; }
-    .field { height: 40px; width: 200px; box-sizing: border-box; border: 0.5px solid rgba(0,0,0,0.35); border-radius: 8px; padding: 0 10px; font-size: 14px; outline: none; }
+    .field { height: 40px; width: 200px; box-sizing: border-box; border: 0.5px solid rgba(0,0,0,0.35); border-radius: 8px; padding: 0 10px; font-size: 14px; outline: none; background: #fff; color: #111; }
     .field:focus { border-color: rgba(0,0,0,0.6); }
     .field.invalid { border: 1px solid #e02424; }
-    .field::-webkit-outer-spin-button, .field::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    .field { -moz-appearance: textfield; }
     .err { font-size: 12px; color: #e02424; margin-top: 4px; }
     .radio-row { display: flex; align-items: center; gap: 6px; font-size: 14px; }
     .calc-btn { height: 40px; padding: 0 18px; background: #111; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
@@ -22,6 +20,7 @@
     table.results { margin-top: 36px; border-collapse: separate; border-spacing: 4px 0; font-size: 14px; width: 100%; }
     table.results th { text-align: left; font-weight: 700; padding: 6px 10px; background: rgba(128,128,128,0.22); border-radius: 8px; white-space: nowrap; }
     table.results td { text-align: left; padding: 6px 10px; white-space: nowrap; }
+    table.results tbody tr:nth-child(even) td { background: rgba(128,128,128,0.10); }
   </style>
 </head>
 <body>
@@ -32,26 +31,30 @@
     <div style="display: grid; grid-template-columns: repeat(2, max-content); gap: 16px; margin-bottom: 16px;">
       <div style="display: flex; flex-direction: column; gap: 4px;">
         <label class="label" for="initial">Начальная сумма</label>
-        <input id="initial" class="field" :class="{ invalid: showErrors && errors.initial }" type="number" inputmode="numeric" min="0"
-               :value="initial" @keydown="blockKey($event, false)" @input="onInput($event, 'initial', false)" />
+        <input id="initial" class="field" :class="{ invalid: showErrors && errors.initial }" type="text" inputmode="decimal"
+               :value="displayValue('initial')" @focus="onFocus('initial')" @blur="onBlur('initial')"
+               @keydown="blockKey($event, false)" @input="onInput($event, 'initial', false)" />
         <div class="err" v-if="showErrors && errors.initial">{{ errors.initial }}</div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px;">
         <label class="label" for="contribution">Сумма пополнения</label>
-        <input id="contribution" class="field" :class="{ invalid: showErrors && errors.contribution }" type="number" inputmode="numeric" min="0"
-               :value="contribution" @keydown="blockKey($event, false)" @input="onInput($event, 'contribution', false)" />
+        <input id="contribution" class="field" :class="{ invalid: showErrors && errors.contribution }" type="text" inputmode="decimal"
+               :value="displayValue('contribution')" @focus="onFocus('contribution')" @blur="onBlur('contribution')"
+               @keydown="blockKey($event, false)" @input="onInput($event, 'contribution', false)" />
         <div class="err" v-if="showErrors && errors.contribution">{{ errors.contribution }}</div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px;">
         <label class="label" for="rate">Годовая ставка, %</label>
-        <input id="rate" class="field" :class="{ invalid: showErrors && errors.ratePercent }" type="number" inputmode="numeric" min="0"
-               :value="ratePercent" @keydown="blockKey($event, false)" @input="onInput($event, 'ratePercent', false)" />
+        <input id="rate" class="field" :class="{ invalid: showErrors && errors.ratePercent }" type="text" inputmode="decimal"
+               :value="displayValue('ratePercent')" @focus="onFocus('ratePercent')" @blur="onBlur('ratePercent')"
+               @keydown="blockKey($event, false)" @input="onInput($event, 'ratePercent', false)" />
         <div class="err" v-if="showErrors && errors.ratePercent">{{ errors.ratePercent }}</div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px;">
         <label class="label" for="years">Срок, лет</label>
-        <input id="years" class="field" :class="{ invalid: showErrors && errors.years }" type="number" inputmode="numeric" min="1" step="1"
-               :value="years" @keydown="blockKey($event, true)" @input="onInput($event, 'years', true)" />
+        <input id="years" class="field" :class="{ invalid: showErrors && errors.years }" type="text" inputmode="numeric"
+               :value="displayValue('years')" @focus="onFocus('years')" @blur="onBlur('years')"
+               @keydown="blockKey($event, true)" @input="onInput($event, 'years', true)" />
         <div class="err" v-if="showErrors && errors.years">{{ errors.years }}</div>
       </div>
     </div>
@@ -78,15 +81,17 @@
       <thead>
         <tr>
           <th>Год</th>
+          <th>Пополнения</th>
           <th>Пополнения за год</th>
-          <th>Проценты за год</th>
-          <th>Баланс на конец года</th>
+          <th>Проценты</th>
+          <th>Итого</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="row in rows" :key="row.year">
           <td>{{ row.year }}</td>
           <td>{{ fmt(row.contribThisYear) }}</td>
+          <td>{{ fmt(row.baseBeforeInterest) }}</td>
           <td>{{ fmt(row.interestThisYear) }}</td>
           <td>{{ fmt(row.balance) }}</td>
         </tr>
@@ -109,27 +114,60 @@
 
         const showErrors = ref(false);
         const rows = ref([]);
+        const focusedKey = ref(null); // какое поле сейчас редактируется
 
         const refs = { initial, contribution, ratePercent, years };
 
-        // Блокировка ввода: запрет '-', '+', 'e'; для целого поля ещё '.' и ','.
+        // Форматтеры (тот же формат, что и в таблице).
+        const rubFmt = new Intl.NumberFormat('ru-RU', {
+          style: 'currency', currency: 'RUB', minimumFractionDigits: 2, maximumFractionDigits: 2
+        });
+        const numFmt = new Intl.NumberFormat('ru-RU', {
+          minimumFractionDigits: 2, maximumFractionDigits: 2
+        });
+
+        // Что показывать в поле: при фокусе — «сырое» значение, иначе — форматированное.
+        function displayValue(key) {
+          const raw = refs[key].value;
+          if (focusedKey.value === key) return raw;
+          if (raw === '') return '';
+          const n = Number(raw);
+          if (isNaN(n)) return raw;
+          if (key === 'initial' || key === 'contribution') return rubFmt.format(n);
+          if (key === 'ratePercent') return numFmt.format(n);
+          if (key === 'years') return String(Math.floor(n)); // срок — целое
+          return raw;
+        }
+
+        function onFocus(key) { focusedKey.value = key; }
+        function onBlur(key) {
+          let raw = refs[key].value;
+          if (raw === '.' || raw === '') raw = ''; // незавершённый ввод
+          refs[key].value = raw;
+          focusedKey.value = null;
+        }
+
+        // Обработка клавиш: Enter запускает расчёт; запрет '-', '+', 'e'; для
+        // целого поля ещё '.' и ','.
         function blockKey(e, intOnly) {
+          if (e.key === 'Enter') { e.target.blur(); calculate(); return; }
           const blocked = ['-', '+', 'e', 'E'];
           if (intOnly) blocked.push('.', ',');
           if (blocked.includes(e.key)) e.preventDefault();
         }
 
-        // Санитизация значения (на случай вставки): не даём отрицательное / дробное (для срока).
+        // Санитизация: оставляем только цифры (и одну дес. точку для сумм/ставки).
         function onInput(e, key, intOnly) {
           let v = e.target.value;
-          if (v === '') { refs[key].value = ''; return; }
-          let n = Number(v);
-          if (isNaN(n)) { refs[key].value = ''; e.target.value = ''; return; }
-          if (n < 0) n = Math.abs(n);
-          if (intOnly) n = Math.floor(n);
-          const out = String(n);
-          refs[key].value = out;
-          if (e.target.value !== out) e.target.value = out;
+          if (intOnly) {
+            v = v.replace(/[^\d]/g, '');
+          } else {
+            v = v.replace(',', '.').replace(/[^\d.]/g, '');
+            const parts = v.split('.');
+            if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+          }
+          refs[key].value = v;
+          if (e.target.value !== v) e.target.value = v;
         }
 
         const errors = computed(() => {
@@ -150,6 +188,9 @@
           Object.values(errors.value).every(v => v === null)
         );
 
+        // Округление до сотых (2 знака после запятой).
+        const round2 = (x) => Math.round(x * 100) / 100;
+
         // Помесячная симуляция (12 шагов в году покрывают все комбинации частот).
         function simulate() {
           const p0 = Number(initial.value) || 0;
@@ -165,6 +206,7 @@
           let balance = p0;
           const out = [];
           for (let year = 1; year <= totalYears; year++) {
+            const startBalance = balance;
             let interestThisYear = 0;
             let contribThisYear = 0;
             for (let month = 1; month <= 12; month++) {
@@ -176,7 +218,16 @@
                 interestThisYear += interest;
               }
             }
-            out.push({ year, contribThisYear, interestThisYear, balance });
+            // Баланс до начисления процентов за год = остаток с прошлого года + пополнения года.
+            const baseBeforeInterest = startBalance + contribThisYear;
+            // Значения для строки округляем до сотых; внутренний balance остаётся точным.
+            out.push({
+              year,
+              contribThisYear: round2(contribThisYear),
+              baseBeforeInterest: round2(baseBeforeInterest),
+              interestThisYear: round2(interestThisYear),
+              balance: round2(balance)
+            });
           }
           return out;
         }
@@ -187,15 +238,13 @@
           rows.value = simulate();
         }
 
-        const rubFmt = new Intl.NumberFormat('ru-RU', {
-          style: 'currency', currency: 'RUB', maximumFractionDigits: 0
-        });
         const fmt = (value) => rubFmt.format(value);
 
         return {
           initial, contribution, ratePercent, years,
           contributionFreq, compounding,
           showErrors, rows, errors, isValid,
+          displayValue, onFocus, onBlur,
           blockKey, onInput, calculate, fmt
         };
       }
