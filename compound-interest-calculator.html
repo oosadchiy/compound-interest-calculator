@@ -8,75 +8,110 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <style>
     body { margin: 0; background: #F4F3EF; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #111; }
-    .page { padding: 20px; }
+    .page { padding: 12px; }
+    .page-title { margin: 0 0 10px; }
     .label { font-size: 14px; font-weight: 700; }
-    .field { height: 40px; width: 200px; box-sizing: border-box; border: 0.5px solid rgba(0,0,0,0.35); border-radius: 8px; padding: 0 10px; font-size: 14px; outline: none; background: #fff; color: #111; }
+    /* Базовые стили — мобильная версия (mobile-first). */
+    .field { height: 36px; width: 100%; box-sizing: border-box; border: 0.5px solid rgba(0,0,0,0.35); border-radius: 8px; padding: 0 10px; font-size: 14px; outline: none; background: #fff; color: #111; }
     .field:focus { border-color: rgba(0,0,0,0.6); }
     .field.invalid { border: 1px solid #e02424; }
     .err { font-size: 12px; color: #e02424; margin-top: 4px; }
     .radio-row { display: flex; align-items: center; gap: 6px; font-size: 14px; }
-    .calc-btn { height: 40px; padding: 0 18px; background: #111; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .calc-btn { height: 40px; width: 100%; padding: 0 18px; background: #111; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
     .calc-btn:active { transform: scale(0.98); }
-    table.results { margin-top: 36px; border-collapse: separate; border-spacing: 4px 0; font-size: 14px; width: 100%; }
+    table.results { margin-top: 24px; border-collapse: separate; border-spacing: 4px 0; font-size: 14px; width: 100%; }
     table.results th { text-align: left; font-weight: 700; padding: 6px 10px; background: rgba(128,128,128,0.22); border-radius: 8px; white-space: nowrap; }
     table.results td { text-align: left; padding: 6px 10px; white-space: nowrap; }
     table.results tbody tr:nth-child(even) td { background: rgba(128,128,128,0.10); }
+    .panel { display: flex; flex-direction: column; gap: 8px; }
+    .fields-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    .controls-group { display: flex; flex-direction: column; flex-wrap: wrap; gap: 8px; }
+    .radio-grid { display: flex; flex-direction: row; flex-wrap: wrap; gap: 24px; }
+    .field-cell, .radio-group { display: flex; flex-direction: column; gap: 4px; }
+    /* Таблица: горизонтальная прокрутка, но полоса скрыта. На мобильной обёртка
+       доходит до правого края страницы; padding-right даёт при полной прокрутке
+       такой же отступ, как слева. */
+    .table-wrap { overflow-x: auto; margin-right: -12px; padding-right: 12px; scrollbar-width: none; -ms-overflow-style: none; }
+    .table-wrap::-webkit-scrollbar { display: none; }
+
+    /* От 375px — поля фикс. 170px и переносятся (растягивание только до 374px). */
+    @media (min-width: 375px) {
+      .field { width: 170px; }
+      .calc-btn { width: 170px; }
+      .fields-grid { grid-template-columns: repeat(auto-fit, 170px); }
+    }
+
+    /* Десктоп — граница sm Tailwind (640px). */
+    @media (min-width: 640px) {
+      .page { padding: 20px; }
+      .page-title { margin-bottom: 20px; }
+      .field { height: 40px; width: 170px; }
+      .panel { flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
+      .fields-grid { grid-template-columns: repeat(2, max-content); gap: 16px; }
+      .controls-group { flex-direction: row; flex-grow: 1; align-items: flex-start; gap: 24px; }
+      .table-wrap { margin-right: 0; padding-right: 0; }
+      table.results { margin-top: 36px; }
+    }
   </style>
 </head>
 <body>
   <div id="app" class="page">
-    <h1 style="font-size: revert; font-weight: revert; margin: 0 0 20px;">Калькулятор сложного процента</h1>
+    <h2 class="page-title" style="font-size: revert; font-weight: revert;">Калькулятор сложного процента</h2>
 
-    <!-- Сетка числовых полей 2×2 -->
-    <div style="display: grid; grid-template-columns: repeat(2, max-content); gap: 16px; margin-bottom: 16px;">
-      <div style="display: flex; flex-direction: column; gap: 4px;">
-        <label class="label" for="initial">Начальная сумма</label>
-        <input id="initial" class="field" :class="{ invalid: showErrors && errors.initial }" type="text" inputmode="decimal"
-               :value="displayValue('initial')" @focus="onFocus('initial')" @blur="onBlur('initial')"
-               @keydown="blockKey($event, false)" @input="onInput($event, 'initial', false)" />
-        <div class="err" v-if="showErrors && errors.initial">{{ errors.initial }}</div>
+    <!-- Панель управления: группа полей + группа «radio + кнопка» в одной переносимой строке -->
+    <div class="panel">
+      <!-- группа полей 2×2 -->
+      <div class="fields-grid">
+        <div class="field-cell">
+          <label class="label" for="initial">Начальная сумма</label>
+          <input id="initial" class="field" :class="{ invalid: showErrors && errors.initial }" type="text" inputmode="decimal"
+                 :value="displayValue('initial')" @focus="onFocus('initial')" @blur="onBlur('initial')"
+                 @keydown="blockKey($event, false)" @input="onInput($event, 'initial', false)" />
+          <div class="err" v-if="showErrors && errors.initial">{{ errors.initial }}</div>
+        </div>
+        <div class="field-cell">
+          <label class="label" for="contribution">Сумма пополнения</label>
+          <input id="contribution" class="field" :class="{ invalid: showErrors && errors.contribution }" type="text" inputmode="decimal"
+                 :value="displayValue('contribution')" @focus="onFocus('contribution')" @blur="onBlur('contribution')"
+                 @keydown="blockKey($event, false)" @input="onInput($event, 'contribution', false)" />
+          <div class="err" v-if="showErrors && errors.contribution">{{ errors.contribution }}</div>
+        </div>
+        <div class="field-cell">
+          <label class="label" for="rate">Годовая ставка, %</label>
+          <input id="rate" class="field" :class="{ invalid: showErrors && errors.ratePercent }" type="text" inputmode="decimal"
+                 :value="displayValue('ratePercent')" @focus="onFocus('ratePercent')" @blur="onBlur('ratePercent')"
+                 @keydown="blockKey($event, false)" @input="onInput($event, 'ratePercent', false)" />
+          <div class="err" v-if="showErrors && errors.ratePercent">{{ errors.ratePercent }}</div>
+        </div>
+        <div class="field-cell">
+          <label class="label" for="years">Срок, лет</label>
+          <input id="years" class="field" :class="{ invalid: showErrors && errors.years }" type="text" inputmode="numeric"
+                 :value="displayValue('years')" @focus="onFocus('years')" @blur="onBlur('years')"
+                 @keydown="blockKey($event, true)" @input="onInput($event, 'years', true)" />
+          <div class="err" v-if="showErrors && errors.years">{{ errors.years }}</div>
+        </div>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 4px;">
-        <label class="label" for="contribution">Сумма пополнения</label>
-        <input id="contribution" class="field" :class="{ invalid: showErrors && errors.contribution }" type="text" inputmode="decimal"
-               :value="displayValue('contribution')" @focus="onFocus('contribution')" @blur="onBlur('contribution')"
-               @keydown="blockKey($event, false)" @input="onInput($event, 'contribution', false)" />
-        <div class="err" v-if="showErrors && errors.contribution">{{ errors.contribution }}</div>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 4px;">
-        <label class="label" for="rate">Годовая ставка, %</label>
-        <input id="rate" class="field" :class="{ invalid: showErrors && errors.ratePercent }" type="text" inputmode="decimal"
-               :value="displayValue('ratePercent')" @focus="onFocus('ratePercent')" @blur="onBlur('ratePercent')"
-               @keydown="blockKey($event, false)" @input="onInput($event, 'ratePercent', false)" />
-        <div class="err" v-if="showErrors && errors.ratePercent">{{ errors.ratePercent }}</div>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 4px;">
-        <label class="label" for="years">Срок, лет</label>
-        <input id="years" class="field" :class="{ invalid: showErrors && errors.years }" type="text" inputmode="numeric"
-               :value="displayValue('years')" @focus="onFocus('years')" @blur="onBlur('years')"
-               @keydown="blockKey($event, true)" @input="onInput($event, 'years', true)" />
-        <div class="err" v-if="showErrors && errors.years">{{ errors.years }}</div>
+
+      <!-- группа «radio + кнопка» -->
+      <div class="controls-group">
+        <div class="radio-grid">
+          <div class="radio-group">
+            <span class="label">Пополнения</span>
+            <label class="radio-row"><input type="radio" value="monthly" v-model="contributionFreq" /> Ежемесячно</label>
+            <label class="radio-row"><input type="radio" value="yearly" v-model="contributionFreq" /> Ежегодно</label>
+          </div>
+          <div class="radio-group">
+            <span class="label">Капитализация</span>
+            <label class="radio-row"><input type="radio" value="semiannual" v-model="compounding" /> Раз в полгода</label>
+            <label class="radio-row"><input type="radio" value="yearly" v-model="compounding" /> Ежегодно</label>
+          </div>
+        </div>
+        <button class="calc-btn" @click="calculate">Рассчитать</button>
       </div>
     </div>
 
-    <!-- Radio-группы + кнопка -->
-    <div style="display: flex; align-items: flex-end; gap: 20px;">
-      <div style="display: grid; grid-template-columns: repeat(2, max-content); column-gap: 24px; row-gap: 16px;">
-        <div style="display: flex; flex-direction: column; gap: 4px;">
-          <span class="label">Регулярность пополнений</span>
-          <label class="radio-row"><input type="radio" value="monthly" v-model="contributionFreq" /> Ежемесячно</label>
-          <label class="radio-row"><input type="radio" value="yearly" v-model="contributionFreq" /> Ежегодно</label>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 4px;">
-          <span class="label">Капитализация процентов</span>
-          <label class="radio-row"><input type="radio" value="semiannual" v-model="compounding" /> Раз в полгода</label>
-          <label class="radio-row"><input type="radio" value="yearly" v-model="compounding" /> Ежегодно</label>
-        </div>
-      </div>
-      <button class="calc-btn" @click="calculate">Рассчитать</button>
-    </div>
-
-    <!-- Таблица результатов по годам -->
+    <!-- Таблица результатов по годам (в обёртке с горизонтальной прокруткой) -->
+    <div class="table-wrap">
     <table class="results">
       <thead>
         <tr>
@@ -97,6 +132,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
   </div>
 
   <script>
