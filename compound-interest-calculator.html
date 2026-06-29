@@ -6,132 +6,100 @@
   <title>Калькулятор сложного процента</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <style>
-    body { margin: 0; background: #F4F3EF; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #111; }
-    .page { padding: 12px; }
-    .page-title { margin: 0 0 10px; }
-    .label { font-size: 14px; font-weight: 700; }
-    /* Базовые стили — мобильная версия (mobile-first). */
-    .field { height: 36px; width: 100%; box-sizing: border-box; border: 0.5px solid rgba(0,0,0,0.35); border-radius: 8px; padding: 0 10px; font-size: 14px; outline: none; background: #fff; color: #111; }
-    .field:focus { border-color: rgba(0,0,0,0.6); }
-    .field.invalid { border: 1px solid #e02424; }
-    .err { font-size: 12px; color: #e02424; margin-top: 4px; }
-    .radio-row { display: flex; align-items: center; gap: 6px; font-size: 14px; }
-    .calc-btn { height: 40px; width: 100%; padding: 0 18px; background: #111; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
-    .calc-btn:active { transform: scale(0.98); }
-    table.results { margin-top: 24px; border-collapse: separate; border-spacing: 4px 0; font-size: 14px; width: 100%; }
-    table.results th { text-align: left; font-weight: 700; padding: 6px 10px; background: rgba(128,128,128,0.22); border-radius: 8px; white-space: nowrap; }
-    table.results td { text-align: left; padding: 6px 10px; white-space: nowrap; }
-    table.results tbody tr:nth-child(even) td { background: rgba(128,128,128,0.10); }
-    .panel { display: flex; flex-direction: column; gap: 8px; }
-    .fields-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
-    .controls-group { display: flex; flex-direction: column; flex-wrap: wrap; gap: 8px; }
-    .radio-grid { display: flex; flex-direction: row; flex-wrap: wrap; gap: 24px; }
-    .field-cell, .radio-group { display: flex; flex-direction: column; gap: 4px; }
-    /* Таблица: горизонтальная прокрутка, но полоса скрыта. На мобильной обёртка
-       доходит до правого края страницы; padding-right даёт при полной прокрутке
-       такой же отступ, как слева. */
-    .table-wrap { overflow-x: auto; margin-right: -12px; padding-right: 12px; scrollbar-width: none; -ms-overflow-style: none; }
-    .table-wrap::-webkit-scrollbar { display: none; }
-
-    /* От 375px — поля фикс. 170px и переносятся (растягивание только до 374px). */
-    @media (min-width: 375px) {
-      .field { width: 170px; }
-      .calc-btn { width: 170px; }
-      .fields-grid { grid-template-columns: repeat(auto-fit, 170px); }
-    }
-
-    /* Десктоп — граница sm Tailwind (640px). */
-    @media (min-width: 640px) {
-      .page { padding: 20px; }
-      .page-title { margin-bottom: 20px; }
-      .field { height: 40px; width: 170px; }
-      .panel { flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
-      .fields-grid { grid-template-columns: repeat(2, max-content); gap: 16px; }
-      .controls-group { flex-direction: row; flex-grow: 1; align-items: flex-start; gap: 24px; }
-      .table-wrap { margin-right: 0; padding-right: 0; }
-      table.results { margin-top: 36px; }
+  <!-- Скрытие полосы прокрутки у таблицы (в Tailwind нет из коробки). -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+      .scrollbar-hide::-webkit-scrollbar { display: none; }
     }
   </style>
 </head>
-<body>
-  <div id="app" class="page">
-    <h2 class="page-title" style="font-size: revert; font-weight: revert;">Калькулятор сложного процента</h2>
+<body class="bg-[#F4F3EF] text-[#111]">
+  <div id="app" class="p-3 sm:p-5">
+    <h1 class="mb-2.5 sm:mb-5 text-2xl font-bold">Калькулятор сложного процента</h1>
 
     <!-- Панель управления: группа полей + группа «radio + кнопка» в одной переносимой строке -->
-    <div class="panel">
+    <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:gap-6">
       <!-- группа полей 2×2 -->
-      <div class="fields-grid">
-        <div class="field-cell">
-          <label class="label" for="initial">Начальная сумма</label>
-          <input id="initial" class="field" :class="{ invalid: showErrors && errors.initial }" type="text" inputmode="decimal"
+      <div class="grid grid-cols-[repeat(auto-fit,170px)] gap-2 sm:grid-cols-[repeat(2,max-content)] sm:gap-4">
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-bold" for="initial">Начальная сумма</label>
+          <input id="initial" type="text" inputmode="decimal"
+                 class="h-9 sm:h-10 w-[170px] rounded-lg px-2.5 text-sm bg-white text-[#111] outline-none"
+                 :class="showErrors && errors.initial ? 'border border-[#e02424]' : 'border-[0.5px] border-black/35 focus:border-black/60'"
                  :value="displayValue('initial')" @focus="onFocus('initial')" @blur="onBlur('initial')"
                  @keydown="blockKey($event, false)" @input="onInput($event, 'initial', false)" />
-          <div class="err" v-if="showErrors && errors.initial">{{ errors.initial }}</div>
+          <div class="text-xs text-[#e02424] mt-1" v-if="showErrors && errors.initial">{{ errors.initial }}</div>
         </div>
-        <div class="field-cell">
-          <label class="label" for="contribution">Сумма пополнения</label>
-          <input id="contribution" class="field" :class="{ invalid: showErrors && errors.contribution }" type="text" inputmode="decimal"
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-bold" for="contribution">Сумма пополнения</label>
+          <input id="contribution" type="text" inputmode="decimal"
+                 class="h-9 sm:h-10 w-[170px] rounded-lg px-2.5 text-sm bg-white text-[#111] outline-none"
+                 :class="showErrors && errors.contribution ? 'border border-[#e02424]' : 'border-[0.5px] border-black/35 focus:border-black/60'"
                  :value="displayValue('contribution')" @focus="onFocus('contribution')" @blur="onBlur('contribution')"
                  @keydown="blockKey($event, false)" @input="onInput($event, 'contribution', false)" />
-          <div class="err" v-if="showErrors && errors.contribution">{{ errors.contribution }}</div>
+          <div class="text-xs text-[#e02424] mt-1" v-if="showErrors && errors.contribution">{{ errors.contribution }}</div>
         </div>
-        <div class="field-cell">
-          <label class="label" for="rate">Годовая ставка, %</label>
-          <input id="rate" class="field" :class="{ invalid: showErrors && errors.ratePercent }" type="text" inputmode="decimal"
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-bold" for="rate">Ставка, %</label>
+          <input id="rate" type="text" inputmode="decimal"
+                 class="h-9 sm:h-10 w-16 rounded-lg px-2.5 text-sm bg-white text-[#111] outline-none"
+                 :class="showErrors && errors.ratePercent ? 'border border-[#e02424]' : 'border-[0.5px] border-black/35 focus:border-black/60'"
                  :value="displayValue('ratePercent')" @focus="onFocus('ratePercent')" @blur="onBlur('ratePercent')"
                  @keydown="blockKey($event, false)" @input="onInput($event, 'ratePercent', false)" />
-          <div class="err" v-if="showErrors && errors.ratePercent">{{ errors.ratePercent }}</div>
+          <div class="text-xs text-[#e02424] mt-1" v-if="showErrors && errors.ratePercent">{{ errors.ratePercent }}</div>
         </div>
-        <div class="field-cell">
-          <label class="label" for="years">Срок, лет</label>
-          <input id="years" class="field" :class="{ invalid: showErrors && errors.years }" type="text" inputmode="numeric"
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-bold" for="years">Срок, лет</label>
+          <input id="years" type="text" inputmode="numeric"
+                 class="h-9 sm:h-10 w-16 rounded-lg px-2.5 text-sm bg-white text-[#111] outline-none"
+                 :class="showErrors && errors.years ? 'border border-[#e02424]' : 'border-[0.5px] border-black/35 focus:border-black/60'"
                  :value="displayValue('years')" @focus="onFocus('years')" @blur="onBlur('years')"
                  @keydown="blockKey($event, true)" @input="onInput($event, 'years', true)" />
-          <div class="err" v-if="showErrors && errors.years">{{ errors.years }}</div>
+          <div class="text-xs text-[#e02424] mt-1" v-if="showErrors && errors.years">{{ errors.years }}</div>
         </div>
       </div>
 
       <!-- группа «radio + кнопка» -->
-      <div class="controls-group">
-        <div class="radio-grid">
-          <div class="radio-group">
-            <span class="label">Пополнения</span>
-            <label class="radio-row"><input type="radio" value="monthly" v-model="contributionFreq" /> Ежемесячно</label>
-            <label class="radio-row"><input type="radio" value="yearly" v-model="contributionFreq" /> Ежегодно</label>
+      <div class="flex flex-col flex-wrap gap-2 sm:flex-row sm:grow sm:items-start sm:gap-6">
+        <div class="flex flex-row flex-wrap gap-6">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-bold">Пополнения</span>
+            <label class="flex items-center gap-1.5 text-sm"><input type="radio" value="monthly" v-model="contributionFreq" /> Ежемесячно</label>
+            <label class="flex items-center gap-1.5 text-sm"><input type="radio" value="yearly" v-model="contributionFreq" /> Ежегодно</label>
           </div>
-          <div class="radio-group">
-            <span class="label">Капитализация</span>
-            <label class="radio-row"><input type="radio" value="semiannual" v-model="compounding" /> Раз в полгода</label>
-            <label class="radio-row"><input type="radio" value="yearly" v-model="compounding" /> Ежегодно</label>
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-bold">Капитализация</span>
+            <label class="flex items-center gap-1.5 text-sm"><input type="radio" value="semiannual" v-model="compounding" /> Раз в полгода</label>
+            <label class="flex items-center gap-1.5 text-sm"><input type="radio" value="yearly" v-model="compounding" /> Ежегодно</label>
           </div>
         </div>
-        <button class="calc-btn" @click="calculate">Рассчитать</button>
+        <button class="h-10 w-[170px] px-[18px] bg-[#111] text-white rounded-lg text-sm font-medium active:scale-[0.98] cursor-pointer" @click="calculate">Рассчитать</button>
       </div>
     </div>
 
-    <!-- Таблица результатов по годам (в обёртке с горизонтальной прокруткой) -->
-    <div class="table-wrap">
-    <table class="results">
-      <thead>
-        <tr>
-          <th>Год</th>
-          <th>Пополнения</th>
-          <th>Пополнения за год</th>
-          <th>Проценты</th>
-          <th>Итого</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in rows" :key="row.year">
-          <td>{{ row.year }}</td>
-          <td>{{ fmt(row.contribThisYear) }}</td>
-          <td>{{ fmt(row.baseBeforeInterest) }}</td>
-          <td>{{ fmt(row.interestThisYear) }}</td>
-          <td>{{ fmt(row.balance) }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <!-- Таблица результатов по годам: горизонтальная прокрутка, полоса скрыта -->
+    <div class="overflow-x-auto -mr-3 pr-3 scrollbar-hide sm:mr-0 sm:pr-0">
+      <table class="w-full mt-6 sm:mt-9 text-sm border-separate border-spacing-x-1 border-spacing-y-0">
+        <thead>
+          <tr class="font-bold">
+            <th class="text-left px-2.5 py-1.5 bg-[rgba(128,128,128,0.22)] rounded-lg whitespace-nowrap">Год</th>
+            <th class="text-left px-2.5 py-1.5 bg-[rgba(128,128,128,0.22)] rounded-lg whitespace-nowrap">Пополнения</th>
+            <th class="text-left px-2.5 py-1.5 bg-[rgba(128,128,128,0.22)] rounded-lg whitespace-nowrap">Пополнения за год</th>
+            <th class="text-left px-2.5 py-1.5 bg-[rgba(128,128,128,0.22)] rounded-lg whitespace-nowrap">Проценты</th>
+            <th class="text-left px-2.5 py-1.5 bg-[rgba(128,128,128,0.22)] rounded-lg whitespace-nowrap">Итого</th>
+          </tr>
+        </thead>
+        <tbody class="[&_tr:nth-child(even)_td]:bg-[rgba(128,128,128,0.10)]">
+          <tr v-for="row in rows" :key="row.year">
+            <td class="text-left px-2.5 py-1.5 whitespace-nowrap">{{ row.year }}</td>
+            <td class="text-left px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.contribThisYear) }}</td>
+            <td class="text-left px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.baseBeforeInterest) }}</td>
+            <td class="text-left px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.interestThisYear) }}</td>
+            <td class="text-left px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.balance) }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -163,7 +131,7 @@
         });
 
         // Что показывать в поле: при фокусе — «сырое» значение, иначе — форматированное.
-        function displayValue(key) {
+        const displayValue = (key) => {
           const raw = refs[key].value;
           if (focusedKey.value === key) return raw;
           if (raw === '') return '';
@@ -173,27 +141,27 @@
           if (key === 'ratePercent') return numFmt.format(n);
           if (key === 'years') return String(Math.floor(n)); // срок — целое
           return raw;
-        }
+        };
 
-        function onFocus(key) { focusedKey.value = key; }
-        function onBlur(key) {
+        const onFocus = (key) => { focusedKey.value = key; };
+        const onBlur = (key) => {
           let raw = refs[key].value;
           if (raw === '.' || raw === '') raw = ''; // незавершённый ввод
           refs[key].value = raw;
           focusedKey.value = null;
-        }
+        };
 
         // Обработка клавиш: Enter запускает расчёт; запрет '-', '+', 'e'; для
         // целого поля ещё '.' и ','.
-        function blockKey(e, intOnly) {
+        const blockKey = (e, intOnly) => {
           if (e.key === 'Enter') { e.target.blur(); calculate(); return; }
           const blocked = ['-', '+', 'e', 'E'];
           if (intOnly) blocked.push('.', ',');
           if (blocked.includes(e.key)) e.preventDefault();
-        }
+        };
 
         // Санитизация: оставляем только цифры (и одну дес. точку для сумм/ставки).
-        function onInput(e, key, intOnly) {
+        const onInput = (e, key, intOnly) => {
           let v = e.target.value;
           if (intOnly) {
             v = v.replace(/[^\d]/g, '');
@@ -204,7 +172,7 @@
           }
           refs[key].value = v;
           if (e.target.value !== v) e.target.value = v;
-        }
+        };
 
         const errors = computed(() => {
           const e = { initial: null, contribution: null, ratePercent: null, years: null };
@@ -228,7 +196,7 @@
         const round2 = (x) => Math.round(x * 100) / 100;
 
         // Помесячная симуляция (12 шагов в году покрывают все комбинации частот).
-        function simulate() {
+        const simulate = () => {
           const p0 = Number(initial.value) || 0;
           const contrib = Number(contribution.value) || 0;
           const rate = (Number(ratePercent.value) || 0) / 100;
@@ -266,13 +234,13 @@
             });
           }
           return out;
-        }
+        };
 
-        function calculate() {
+        const calculate = () => {
           showErrors.value = true;
           if (!isValid.value) return; // таблица не пересчитывается
           rows.value = simulate();
-        }
+        };
 
         const fmt = (value) => rubFmt.format(value);
 
