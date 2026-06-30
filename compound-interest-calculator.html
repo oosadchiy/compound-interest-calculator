@@ -19,40 +19,40 @@
     <h1 class="mb-2.5 sm:mb-5 text-2xl font-bold">Калькулятор сложного процента</h1>
 
     <!-- Панель управления: группа полей + группа «radio + кнопка» в одной переносимой строке -->
-    <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:gap-6">
+    <div class="text-sm flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:gap-6">
       <!-- группа полей 2×2 -->
       <div class="grid grid-cols-[repeat(auto-fit,170px)] gap-2 sm:grid-cols-[repeat(2,max-content)] sm:gap-4">
         <div class="flex flex-col gap-1">
-          <label class="text-sm font-bold" for="initial">Начальная сумма</label>
+          <label class="font-bold" for="initial">Начальная сумма</label>
           <input id="initial" type="text" inputmode="decimal"
-                 class="h-9 sm:h-10 w-[170px] rounded-lg px-2.5 text-sm bg-white text-[#111] outline-none"
+                 class="h-9 sm:h-10 w-[170px] rounded-lg px-2.5 bg-white text-[#111] outline-none"
                  :class="showErrors && errors.initial ? 'border border-[#e02424]' : 'border-[0.5px] border-black/35 focus:border-black/60'"
                  :value="displayValue('initial')" @focus="onFocus('initial')" @blur="onBlur('initial')"
                  @keydown="blockKey($event, false)" @input="onInput($event, 'initial', false)" />
           <div class="text-xs text-[#e02424] mt-1" v-if="showErrors && errors.initial">{{ errors.initial }}</div>
         </div>
         <div class="flex flex-col gap-1">
-          <label class="text-sm font-bold" for="contribution">Сумма пополнения</label>
+          <label class="font-bold" for="contribution">Сумма пополнения</label>
           <input id="contribution" type="text" inputmode="decimal"
-                 class="h-9 sm:h-10 w-[170px] rounded-lg px-2.5 text-sm bg-white text-[#111] outline-none"
+                 class="h-9 sm:h-10 w-[170px] rounded-lg px-2.5 bg-white text-[#111] outline-none"
                  :class="showErrors && errors.contribution ? 'border border-[#e02424]' : 'border-[0.5px] border-black/35 focus:border-black/60'"
                  :value="displayValue('contribution')" @focus="onFocus('contribution')" @blur="onBlur('contribution')"
                  @keydown="blockKey($event, false)" @input="onInput($event, 'contribution', false)" />
           <div class="text-xs text-[#e02424] mt-1" v-if="showErrors && errors.contribution">{{ errors.contribution }}</div>
         </div>
         <div class="flex flex-col gap-1">
-          <label class="text-sm font-bold" for="rate">Ставка, %</label>
+          <label class="font-bold" for="rate">Ставка, %</label>
           <input id="rate" type="text" inputmode="decimal"
-                 class="h-9 sm:h-10 w-16 rounded-lg px-2.5 text-sm bg-white text-[#111] outline-none"
+                 class="h-9 sm:h-10 w-16 rounded-lg px-2.5 bg-white text-[#111] outline-none"
                  :class="showErrors && errors.ratePercent ? 'border border-[#e02424]' : 'border-[0.5px] border-black/35 focus:border-black/60'"
                  :value="displayValue('ratePercent')" @focus="onFocus('ratePercent')" @blur="onBlur('ratePercent')"
                  @keydown="blockKey($event, false)" @input="onInput($event, 'ratePercent', false)" />
           <div class="text-xs text-[#e02424] mt-1" v-if="showErrors && errors.ratePercent">{{ errors.ratePercent }}</div>
         </div>
         <div class="flex flex-col gap-1">
-          <label class="text-sm font-bold" for="years">Срок, лет</label>
+          <label class="font-bold" for="years">Срок, лет</label>
           <input id="years" type="text" inputmode="numeric"
-                 class="h-9 sm:h-10 w-16 rounded-lg px-2.5 text-sm bg-white text-[#111] outline-none"
+                 class="h-9 sm:h-10 w-16 rounded-lg px-2.5 bg-white text-[#111] outline-none"
                  :class="showErrors && errors.years ? 'border border-[#e02424]' : 'border-[0.5px] border-black/35 focus:border-black/60'"
                  :value="displayValue('years')" @focus="onFocus('years')" @blur="onBlur('years')"
                  @keydown="blockKey($event, true)" @input="onInput($event, 'years', true)" />
@@ -64,17 +64,17 @@
       <div class="flex flex-col flex-wrap gap-2 sm:flex-row sm:grow sm:items-start sm:gap-6">
         <div class="flex flex-row flex-wrap gap-6">
           <div class="flex flex-col gap-1">
-            <span class="text-sm font-bold">Пополнения</span>
-            <label class="flex items-center gap-1.5 text-sm"><input type="radio" value="monthly" v-model="contributionFreq" /> Ежемесячно</label>
-            <label class="flex items-center gap-1.5 text-sm"><input type="radio" value="yearly" v-model="contributionFreq" /> Ежегодно</label>
+            <span class="font-bold">Пополнения</span>
+            <label class="flex items-center gap-1.5"><input type="radio" value="monthly" v-model="contributionFreq" /> Ежемесячно</label>
+            <label class="flex items-center gap-1.5"><input type="radio" value="yearly" v-model="contributionFreq" /> Ежегодно</label>
           </div>
           <div class="flex flex-col gap-1">
-            <span class="text-sm font-bold">Капитализация</span>
-            <label class="flex items-center gap-1.5 text-sm"><input type="radio" value="semiannual" v-model="compounding" /> Раз в полгода</label>
-            <label class="flex items-center gap-1.5 text-sm"><input type="radio" value="yearly" v-model="compounding" /> Ежегодно</label>
+            <span class="font-bold">Капитализация</span>
+            <label class="flex items-center gap-1.5"><input type="radio" value="semiannual" v-model="compounding" /> Раз в полгода</label>
+            <label class="flex items-center gap-1.5"><input type="radio" value="yearly" v-model="compounding" /> Ежегодно</label>
           </div>
         </div>
-        <button class="h-10 w-[170px] px-[18px] bg-[#111] text-white rounded-lg text-sm font-medium active:scale-[0.98] cursor-pointer" @click="calculate">Рассчитать</button>
+        <button class="h-10 w-[170px] px-[18px] bg-[#111] text-white rounded-lg font-medium active:scale-[0.98] cursor-pointer" @click="calculate">Рассчитать</button>
       </div>
     </div>
 
@@ -83,20 +83,16 @@
       <table class="w-full mt-6 sm:mt-9 text-sm border-separate border-spacing-x-1 border-spacing-y-0">
         <thead>
           <tr class="font-bold">
-            <th class="text-left px-2.5 py-1.5 bg-[rgba(128,128,128,0.22)] rounded-lg whitespace-nowrap">Год</th>
-            <th class="text-left px-2.5 py-1.5 bg-[rgba(128,128,128,0.22)] rounded-lg whitespace-nowrap">Пополнения</th>
-            <th class="text-left px-2.5 py-1.5 bg-[rgba(128,128,128,0.22)] rounded-lg whitespace-nowrap">Пополнения за год</th>
-            <th class="text-left px-2.5 py-1.5 bg-[rgba(128,128,128,0.22)] rounded-lg whitespace-nowrap">Проценты</th>
-            <th class="text-left px-2.5 py-1.5 bg-[rgba(128,128,128,0.22)] rounded-lg whitespace-nowrap">Итого</th>
+            <th v-for="h in headers" :key="h" class="px-2.5 py-1.5 bg-[#80808038] rounded-lg whitespace-nowrap">{{ h }}</th>
           </tr>
         </thead>
-        <tbody class="[&_tr:nth-child(even)_td]:bg-[rgba(128,128,128,0.10)]">
-          <tr v-for="row in rows" :key="row.year">
-            <td class="text-left px-2.5 py-1.5 whitespace-nowrap">{{ row.year }}</td>
-            <td class="text-left px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.contribThisYear) }}</td>
-            <td class="text-left px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.baseBeforeInterest) }}</td>
-            <td class="text-left px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.interestThisYear) }}</td>
-            <td class="text-left px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.balance) }}</td>
+        <tbody>
+          <tr v-for="row in rows" :key="row.year" class="even:bg-[#8080801A]">
+            <td class="px-2.5 py-1.5 whitespace-nowrap">{{ row.year }}</td>
+            <td class="px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.contribThisYear) }}</td>
+            <td class="px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.baseBeforeInterest) }}</td>
+            <td class="px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.interestThisYear) }}</td>
+            <td class="px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.balance) }}</td>
           </tr>
         </tbody>
       </table>
@@ -192,6 +188,11 @@
           Object.values(errors.value).every(v => v === null)
         );
 
+        // Заголовки колонок таблицы.
+        const headers = computed(() =>
+          ['Год', 'Пополнения', 'Пополнения за год', 'Проценты', 'Итого']
+        );
+
         // Округление до сотых (2 знака после запятой).
         const round2 = (x) => Math.round(x * 100) / 100;
 
@@ -247,7 +248,7 @@
         return {
           initial, contribution, ratePercent, years,
           contributionFreq, compounding,
-          showErrors, rows, errors, isValid,
+          showErrors, rows, errors, isValid, headers,
           displayValue, onFocus, onBlur,
           blockKey, onInput, calculate, fmt
         };
