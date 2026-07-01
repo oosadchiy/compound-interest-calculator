@@ -13,49 +13,60 @@
       .scrollbar-hide::-webkit-scrollbar { display: none; }
     }
   </style>
+  <!-- Кнопки шага у number-инпутов — всегда видимые (в WebKit по умолчанию появляются только при наведении). -->
+  <style>
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: inner-spin-button;
+      opacity: 1;
+    }
+  </style>
 </head>
-<body class="bg-[#F4F3EF] text-[#111]">
-  <div id="app" class="p-3 sm:p-5">
+<body class="bg-[#F4F4F9] text-[#111]">
+  <div id="app" class="p-3 sm:p-6">
+    <div class="mx-auto max-w-[800px] flex flex-col gap-2 sm:gap-4">
+    <!-- Карточка с заголовком и фильтрами -->
+    <div class="bg-white rounded-2xl p-3 sm:p-5">
     <h1 class="mb-2.5 sm:mb-5 text-2xl font-bold">Калькулятор сложного процента</h1>
 
     <!-- Панель управления: группа полей + группа «radio + кнопка» в одной переносимой строке -->
     <div class="text-sm flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:gap-6">
       <!-- группа полей 2×2 -->
-      <div class="grid grid-cols-[repeat(auto-fit,170px)] gap-2 sm:grid-cols-[repeat(2,max-content)] sm:gap-4">
+      <div class="flex flex-wrap items-start gap-2 sm:gap-4">
         <div class="flex flex-col gap-1">
           <label class="font-bold" for="initial">Начальная сумма</label>
           <input id="initial" type="text" inputmode="decimal"
-                 class="h-9 sm:h-10 w-[170px] rounded-lg px-2.5 bg-white text-[#111] outline-none"
+                 class="h-8 sm:h-10 w-[130px] rounded-lg px-2 bg-white text-[#111] outline-none"
                  :class="showErrors && errors.initial ? 'border border-[#e02424]' : 'border-[0.5px] border-black/35 focus:border-black/60'"
                  :value="displayValue('initial')" @focus="onFocus('initial')" @blur="onBlur('initial')"
-                 @keydown="blockKey($event, false)" @input="onInput($event, 'initial', false)" />
+                 @keydown="blockKey($event, false)" @input="onInput($event, 'initial', false, 1000000000)" />
           <div class="text-xs text-[#e02424] mt-1" v-if="showErrors && errors.initial">{{ errors.initial }}</div>
         </div>
         <div class="flex flex-col gap-1">
           <label class="font-bold" for="contribution">Сумма пополнения</label>
           <input id="contribution" type="text" inputmode="decimal"
-                 class="h-9 sm:h-10 w-[170px] rounded-lg px-2.5 bg-white text-[#111] outline-none"
+                 class="h-8 sm:h-10 w-[130px] rounded-lg px-2 bg-white text-[#111] outline-none"
                  :class="showErrors && errors.contribution ? 'border border-[#e02424]' : 'border-[0.5px] border-black/35 focus:border-black/60'"
                  :value="displayValue('contribution')" @focus="onFocus('contribution')" @blur="onBlur('contribution')"
-                 @keydown="blockKey($event, false)" @input="onInput($event, 'contribution', false)" />
+                 @keydown="blockKey($event, false)" @input="onInput($event, 'contribution', false, 1000000000)" />
           <div class="text-xs text-[#e02424] mt-1" v-if="showErrors && errors.contribution">{{ errors.contribution }}</div>
         </div>
         <div class="flex flex-col gap-1">
           <label class="font-bold" for="rate">Ставка, %</label>
-          <input id="rate" type="text" inputmode="decimal"
-                 class="h-9 sm:h-10 w-16 rounded-lg px-2.5 bg-white text-[#111] outline-none"
+          <input id="rate" type="number" inputmode="decimal" min="0" max="999.99" step="0.1"
+                 class="h-8 sm:h-10 w-20 rounded-lg px-2 bg-white text-[#111] outline-none"
                  :class="showErrors && errors.ratePercent ? 'border border-[#e02424]' : 'border-[0.5px] border-black/35 focus:border-black/60'"
-                 :value="displayValue('ratePercent')" @focus="onFocus('ratePercent')" @blur="onBlur('ratePercent')"
-                 @keydown="blockKey($event, false)" @input="onInput($event, 'ratePercent', false)" />
+                 :value="ratePercent"
+                 @keydown="blockKey($event, false)" @input="onInput($event, 'ratePercent', false, 999.99)" />
           <div class="text-xs text-[#e02424] mt-1" v-if="showErrors && errors.ratePercent">{{ errors.ratePercent }}</div>
         </div>
         <div class="flex flex-col gap-1">
           <label class="font-bold" for="years">Срок, лет</label>
-          <input id="years" type="text" inputmode="numeric"
-                 class="h-9 sm:h-10 w-16 rounded-lg px-2.5 bg-white text-[#111] outline-none"
+          <input id="years" type="number" inputmode="numeric" min="1" max="100" step="1"
+                 class="h-8 sm:h-10 w-20 rounded-lg px-2 bg-white text-[#111] outline-none"
                  :class="showErrors && errors.years ? 'border border-[#e02424]' : 'border-[0.5px] border-black/35 focus:border-black/60'"
-                 :value="displayValue('years')" @focus="onFocus('years')" @blur="onBlur('years')"
-                 @keydown="blockKey($event, true)" @input="onInput($event, 'years', true)" />
+                 :value="years"
+                 @keydown="blockKey($event, true)" @input="onInput($event, 'years', true, 100)" />
           <div class="text-xs text-[#e02424] mt-1" v-if="showErrors && errors.years">{{ errors.years }}</div>
         </div>
       </div>
@@ -74,28 +85,33 @@
             <label class="flex items-center gap-1.5"><input type="radio" value="yearly" v-model="compounding" /> Ежегодно</label>
           </div>
         </div>
-        <button class="h-10 w-[170px] px-[18px] bg-[#111] text-white rounded-lg font-medium active:scale-[0.98] cursor-pointer" @click="calculate">Рассчитать</button>
+        <button class="h-8 sm:h-10 w-[170px] px-[18px] bg-[#111] text-white rounded-lg font-medium active:scale-[0.98] cursor-pointer" @click="calculate">Рассчитать</button>
       </div>
     </div>
+    </div>
 
-    <!-- Таблица результатов по годам: горизонтальная прокрутка, полоса скрыта -->
+    <!-- Карточка с таблицей результатов -->
+    <div class="bg-white rounded-2xl p-3 sm:p-5">
+    <!-- обёртка таблицы: горизонтальная прокрутка, полоса скрыта -->
     <div class="overflow-x-auto -mr-3 pr-3 scrollbar-hide sm:mr-0 sm:pr-0">
-      <table class="w-full mt-6 sm:mt-9 text-sm border-separate border-spacing-x-1 border-spacing-y-0">
+      <table class="w-full text-sm border-separate border-spacing-0">
         <thead>
           <tr class="font-bold">
-            <th v-for="h in headers" :key="h" class="px-2.5 py-1.5 bg-[#80808038] rounded-lg whitespace-nowrap">{{ h }}</th>
+            <th v-for="h in headers" :key="h" class="px-2 sm:px-2.5 py-1.5 sm:py-3 bg-[#80808038] text-left whitespace-nowrap first:rounded-l-lg last:rounded-r-lg first:sticky first:left-0 first:z-10 first:bg-[#E3E3E3]">{{ h }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="row in rows" :key="row.year" class="even:bg-[#8080801A]">
-            <td class="px-2.5 py-1.5 whitespace-nowrap">{{ row.year }}</td>
-            <td class="px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.contribThisYear) }}</td>
-            <td class="px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.baseBeforeInterest) }}</td>
-            <td class="px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.interestThisYear) }}</td>
-            <td class="px-2.5 py-1.5 whitespace-nowrap">{{ fmt(row.balance) }}</td>
+            <td class="sticky left-0 z-10 px-2 sm:px-2.5 py-1.5 sm:py-3 whitespace-nowrap" :class="row.year % 2 === 0 ? 'bg-[#F2F2F2]' : 'bg-white'">{{ row.year }}</td>
+            <td class="px-2 sm:px-2.5 py-1.5 sm:py-3 whitespace-nowrap">{{ fmt(row.contribThisYear) }}</td>
+            <td class="px-2 sm:px-2.5 py-1.5 sm:py-3 whitespace-nowrap">{{ fmt(row.baseBeforeInterest) }}</td>
+            <td class="px-2 sm:px-2.5 py-1.5 sm:py-3 whitespace-nowrap">{{ fmt(row.interestThisYear) }}</td>
+            <td class="px-2 sm:px-2.5 py-1.5 sm:py-3 whitespace-nowrap">{{ fmt(row.balance) }}</td>
           </tr>
         </tbody>
       </table>
+    </div>
+    </div>
     </div>
   </div>
 
@@ -118,10 +134,7 @@
 
         const refs = { initial, contribution, ratePercent, years };
 
-        // Форматтеры (тот же формат, что и в таблице).
-        const rubFmt = new Intl.NumberFormat('ru-RU', {
-          style: 'currency', currency: 'RUB', minimumFractionDigits: 2, maximumFractionDigits: 2
-        });
+        // Числовой форматтер: разряды + 2 знака после запятой, без символа валюты.
         const numFmt = new Intl.NumberFormat('ru-RU', {
           minimumFractionDigits: 2, maximumFractionDigits: 2
         });
@@ -133,7 +146,7 @@
           if (raw === '') return '';
           const n = Number(raw);
           if (isNaN(n)) return raw;
-          if (key === 'initial' || key === 'contribution') return rubFmt.format(n);
+          if (key === 'initial' || key === 'contribution') return numFmt.format(n);
           if (key === 'ratePercent') return numFmt.format(n);
           if (key === 'years') return String(Math.floor(n)); // срок — целое
           return raw;
@@ -157,7 +170,8 @@
         };
 
         // Санитизация: оставляем только цифры (и одну дес. точку для сумм/ставки).
-        const onInput = (e, key, intOnly) => {
+        // max — необязательный верхний предел: значение больше него заменяется на него.
+        const onInput = (e, key, intOnly, max) => {
           let v = e.target.value;
           if (intOnly) {
             v = v.replace(/[^\d]/g, '');
@@ -165,6 +179,9 @@
             v = v.replace(',', '.').replace(/[^\d.]/g, '');
             const parts = v.split('.');
             if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+          }
+          if (max != null && v !== '' && !isNaN(Number(v)) && Number(v) > max) {
+            v = String(max);
           }
           refs[key].value = v;
           if (e.target.value !== v) e.target.value = v;
@@ -179,7 +196,7 @@
             e.years = 'Заполните поле';
           } else {
             const y = Number(years.value);
-            if (!Number.isInteger(y) || y < 1) e.years = 'Введите целое число от 1';
+            if (!Number.isInteger(y) || y < 1 || y > 100) e.years = 'Введите целое число от 1 до 100';
           }
           return e;
         });
@@ -190,7 +207,7 @@
 
         // Заголовки колонок таблицы.
         const headers = computed(() =>
-          ['Год', 'Пополнения', 'Пополнения за год', 'Проценты', 'Итого']
+          ['Год', 'Пополнения', 'Баланс', 'Проценты', 'Итого']
         );
 
         // Округление до сотых (2 знака после запятой).
@@ -243,7 +260,7 @@
           rows.value = simulate();
         };
 
-        const fmt = (value) => rubFmt.format(value);
+        const fmt = (value) => numFmt.format(value);
 
         return {
           initial, contribution, ratePercent, years,
